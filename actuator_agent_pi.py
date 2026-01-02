@@ -9,7 +9,7 @@ import busio
 import adafruit_mcp4725
 
 # --- Configuration ---
-LAPTOP_IP = "YOUR_LAPTOP_IP_ADDRESS"  # <--- IMPORTANT: SET YOUR LAPTOP's IP
+LAPTOP_IP = "0.0.0.0"  # <--- IMPORTANT: SET YOUR LAPTOP's IP
 LAPTOP_PORT = 65431
 AGENT_ID = "actuator_pi"
 V_REF = 3.3
@@ -86,15 +86,24 @@ def main():
                     command_data = s.recv(1024)
                     if not command_data: break
                     
+                    # <<< MODIFICATION START >>>
+                    t2_actuator = time.time() # Time of receipt
+                    
                     command = json.loads(command_data.decode('utf-8'))
                     voltage_set = control_vehicle(command['voltage'], command['status'])
                     
+                    t3_actuator = time.time() # Time after action
+                    
+                    # New report packet with detailed timestamps
                     report_back = {
                         'type': 'actuator_status',
+                        't2': t2_actuator,
+                        't3': t3_actuator,
                         'gps': latest_gps_coords,
-                        'voltage_set': voltage_set,
-                        'timestamp': time.time()
+                        'voltage_set': voltage_set
                     }
+                    # <<< MODIFICATION END >>>
+                    
                     s.sendall(json.dumps(report_back).encode('utf-8'))
 
         except (ConnectionRefusedError, ConnectionResetError, BrokenPipeError) as e:
@@ -106,5 +115,5 @@ def main():
         
         time.sleep(5)
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     main()
